@@ -46,10 +46,6 @@ The UI is inspired by the classic Notepad.app aesthetic - clean, minimal, and di
 The component structure follows a **"keep it simple"** approach: small, focused files with clear responsibilities.
 ---
 
-##  Installation
-
-``
-
 
 ##  Key Design Decisions
 Decision	Rationale
