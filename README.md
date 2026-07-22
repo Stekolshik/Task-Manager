@@ -64,6 +64,7 @@ Manual address input + GPS	Falls back to TZ requirement + real-world UX
 Images stored as local URIs	Attachments may break if device storage is cleared
 Sync conflict: last-write-wins	Simple strategy, documented
 Notifications require foreground	May need additional setup for background
+Code quality compromises | Some files could be more DRY | Time-boxed delivery (48h) — prioritizing working features over perfect code
 
 
 ##  AI/Tooling Disclosure
