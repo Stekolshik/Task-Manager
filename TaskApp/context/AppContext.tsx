@@ -9,6 +9,7 @@ type AppContextType = {
   theme: 'light' | 'dark';
   syncStatus: 'online' | 'syncing' | 'offline' | 'error';
   serverUrl: string;
+  googleMapsApiKey: string;
   loading: boolean;
 
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'syncStatus'>) => Promise<void>;
@@ -20,8 +21,10 @@ type AppContextType = {
 
   toggleTheme: () => Promise<void>;
   setServerUrl: (url: string) => Promise<void>;
+  setGoogleMapsApiKey: (key: string) => Promise<void>;
 
   syncNow: () => Promise<void>;
+  clearAllTasks: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -31,25 +34,28 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [serverUrl, setServerUrlState] = useState<string>(DEFAULT_SERVER_URL);
+  const [googleMapsApiKey, setGoogleMapsApiKeyState] = useState<string>('');
   const [syncStatus, setSyncStatus] = useState<'online' | 'syncing' | 'offline' | 'error'>('offline');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [savedTasks, savedHistory, savedTheme, savedServerUrl] = await Promise.all([
+        const [savedTasks, savedHistory, savedTheme, savedServerUrl, savedGoogleMapsApiKey] = await Promise.all([
           storage.getTasks(),
           storage.getHistory(),
           storage.getTheme(),
-          storage.getServerUrl()
+          storage.getServerUrl(),
+          storage.getGoogleMapsApiKey()
         ]);
 
         setTasks(savedTasks);
         setHistory(savedHistory);
         setTheme(savedTheme);
         setServerUrlState(savedServerUrl);
+        setGoogleMapsApiKeyState(savedGoogleMapsApiKey);
 
-        await sync.init();
+        await sync.init(savedServerUrl);
         setSyncStatus(sync.isConnected ? 'online' : 'offline');
 
         await notifications.requestPermissions();
@@ -82,7 +88,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       id: generateId(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      syncStatus: sync.isConnected ? 'synced' : 'pending'
+      syncStatus: 'pending'
     };
 
     const updatedTasks = [newTask, ...tasks];
@@ -98,15 +104,37 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     await notifications.scheduleReminder(newTask);
 
     if (sync.isConnected) {
-      await sync.syncNow();
+      const result = await sync.syncNow(serverUrl);
+      if (result.success) {
+        const syncedTasks = updatedTasks.map(t =>
+          t.id === newTask.id ? { ...t, syncStatus: 'synced' as const } : t
+        );
+        setTasks(syncedTasks);
+        await storage.saveTasks(syncedTasks);
+
+        await addHistory({
+          taskId: newTask.id,
+          action: 'synced',
+          description: `Task "${newTask.title}" synced with server`
+        });
+      } else {
+        await addHistory({
+          taskId: newTask.id,
+          action: 'synced',
+          description: `Sync failed for task "${newTask.title}"`
+        });
+      }
     }
-  }, [tasks, addHistory]);
+  }, [tasks, addHistory, serverUrl]);
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
-    const updatedTasks = tasks.map(task =>
-      task.id === id
-        ? { ...task, ...updates, updatedAt: new Date().toISOString() }
-        : task
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const updatedTasks = tasks.map(t =>
+      t.id === id
+        ? { ...t, ...updates, updatedAt: new Date().toISOString(), syncStatus: 'pending' as const }
+        : t
     );
 
     setTasks(updatedTasks);
@@ -115,24 +143,35 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     await addHistory({
       taskId: id,
       action: 'updated',
-      description: `Updated task`
+      description: `Task "${task.title}" updated`
     });
-  }, [tasks, addHistory]);
+
+    if (sync.isConnected) {
+      const result = await sync.syncNow(serverUrl);
+      if (result.success) {
+        const syncedTasks = updatedTasks.map(t =>
+          t.id === id ? { ...t, syncStatus: 'synced' as const } : t
+        );
+        setTasks(syncedTasks);
+        await storage.saveTasks(syncedTasks);
+      }
+    }
+  }, [tasks, addHistory, serverUrl]);
 
   const deleteTask = useCallback(async (id: string) => {
     const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
     const updatedTasks = tasks.filter(t => t.id !== id);
 
     setTasks(updatedTasks);
     await storage.saveTasks(updatedTasks);
 
-    if (task) {
-      await addHistory({
-        taskId: id,
-        action: 'deleted',
-        description: `Deleted task "${task.title}"`
-      });
-    }
+    await addHistory({
+      taskId: id,
+      action: 'deleted',
+      description: `Task "${task.title}" deleted`
+    });
   }, [tasks, addHistory]);
 
   const updateTaskStatus = useCallback(async (id: string, status: Task['status']) => {
@@ -141,7 +180,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
     const updatedTasks = tasks.map(t =>
       t.id === id
-        ? { ...t, status, updatedAt: new Date().toISOString() }
+        ? { ...t, status, updatedAt: new Date().toISOString(), syncStatus: 'pending' as const }
         : t
     );
 
@@ -151,9 +190,20 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     await addHistory({
       taskId: id,
       action: 'status_changed',
-      description: `Status changed to "${status}"`
+      description: `Task "${task.title}" status changed to "${status}"`
     });
-  }, [tasks, addHistory]);
+
+    if (sync.isConnected) {
+      const result = await sync.syncNow(serverUrl);
+      if (result.success) {
+        const syncedTasks = updatedTasks.map(t =>
+          t.id === id ? { ...t, syncStatus: 'synced' as const } : t
+        );
+        setTasks(syncedTasks);
+        await storage.saveTasks(syncedTasks);
+      }
+    }
+  }, [tasks, addHistory, serverUrl]);
 
   const toggleTheme = useCallback(async () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -166,11 +216,50 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     await storage.saveServerUrl(url);
   }, []);
 
-  const syncNow = useCallback(async () => {
-    setSyncStatus('syncing');
-    const result = await sync.syncNow();
-    setSyncStatus(result.success ? 'online' : 'error');
+  const setGoogleMapsApiKey = useCallback(async (key: string) => {
+    setGoogleMapsApiKeyState(key);
+    await storage.saveGoogleMapsApiKey(key);
   }, []);
+
+  const syncNow = useCallback(async () => {
+    console.log('🔄 Manual sync triggered');
+    setSyncStatus('syncing');
+    const result = await sync.syncNow(serverUrl);
+    console.log('📊 Sync result:', result);
+    setSyncStatus(result.success ? 'online' : 'error');
+
+    if (result.success) {
+      const syncedTasks = tasks.map(t =>
+        t.syncStatus === 'pending' ? { ...t, syncStatus: 'synced' as const } : t
+      );
+      setTasks(syncedTasks);
+      await storage.saveTasks(syncedTasks);
+
+      await addHistory({
+        taskId: 'all',
+        action: 'synced',
+        description: 'Manual sync completed'
+      });
+    } else {
+      await addHistory({
+        taskId: 'all',
+        action: 'synced',
+        description: `Sync failed: ${result.error || 'Unknown error'}`
+      });
+    }
+  }, [serverUrl, tasks, addHistory]);
+
+  const clearAllTasks = useCallback(async () => {
+    const count = tasks.length;
+    setTasks([]);
+    await storage.saveTasks([]);
+
+    await addHistory({
+      taskId: 'all',
+      action: 'deleted',
+      description: `Deleted all tasks (${count} tasks)`
+    });
+  }, [tasks, addHistory]);
 
   return (
     <AppContext.Provider value={{
@@ -179,6 +268,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       theme,
       syncStatus,
       serverUrl,
+      googleMapsApiKey,
       loading,
       addTask,
       updateTask,
@@ -187,7 +277,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       addHistory,
       toggleTheme,
       setServerUrl,
-      syncNow
+      setGoogleMapsApiKey,
+      syncNow,
+      clearAllTasks
     }}>
       {children}
     </AppContext.Provider>

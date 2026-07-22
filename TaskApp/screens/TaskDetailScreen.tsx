@@ -87,13 +87,17 @@ export default function TaskDetailScreen({ route, navigation }: any) {
             <Text style={styles.fieldValue}>📍 {task.location.address}</Text>
           </View>
 
-          {task.attachments.length > 0 && (
+          {task.attachments && task.attachments.length > 0 && (
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Attachments</Text>
               <View style={styles.attachmentsContainer}>
                 {task.attachments.map((attachment) => (
                   <View key={attachment.id} style={styles.attachmentItem}>
-                    <Ionicons name="image-outline" size={40} color="#666" />
+                    <Image 
+                      source={{ uri: attachment.uri }} 
+                      style={styles.attachmentImage}
+                      onError={() => console.log('Failed to load image')}
+                    />
                     <Text style={styles.attachmentName} numberOfLines={1}>
                       {attachment.fileName}
                     </Text>
@@ -231,10 +235,13 @@ const styles = StyleSheet.create({
   },
   attachmentItem: {
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 8,
     width: 80,
+  },
+  attachmentImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
   },
   attachmentName: {
     fontSize: 10,

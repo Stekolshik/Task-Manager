@@ -1,0 +1,21 @@
+{
+  "tasks": [
+    {
+      "title": "23",
+      "description": "Hdsg",
+      "dueDate": "2026-07-22 19:53",
+      "location": {
+        "address": "20/2, улица Тимошенко, Минск, Минская область, Беларусь",
+        "latitude": 53.9013453,
+        "longitude": 27.4590073
+      },
+      "status": "Completed",
+      "attachments": [],
+      "createdAt": "2026-07-22T16:54:13.349Z",
+      "updatedAt": "2026-07-22T17:14:47.624Z",
+      "id": "sUojHjGCZuE"
+    }
+  ],
+  "history": [],
+  "$schema": "./node_modules/json-server/schema.json"
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Task } from '../types';
-import { formatDate, STATUS_LABELS, STATUS_COLORS } from '../utils/constants';
+import { formatDate, STATUS_LABELS, STATUS_COLORS, getTimeUntil } from '../utils/constants';
 
 type TaskCardProps = {
   task: Task;
@@ -20,6 +20,9 @@ const StatusBadge = ({ status }: { status: Task['status'] }) => {
 };
 
 export const TaskCard = ({ task, onPress }: TaskCardProps) => {
+  const timeUntil = getTimeUntil(task.dueDate);
+  const isOverdue = timeUntil === 'Overdue';
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.header}>
@@ -38,6 +41,12 @@ export const TaskCard = ({ task, onPress }: TaskCardProps) => {
         {task.attachments.length > 0 && (
           <Text style={styles.attachment}>📎 {task.attachments.length}</Text>
         )}
+        <Text style={[
+          styles.timeUntil,
+          isOverdue && styles.timeUntilOverdue
+        ]}>
+          {timeUntil}
+        </Text>
         {task.syncStatus === 'pending' && (
           <Text style={styles.syncPending}>⏳</Text>
         )}
@@ -91,7 +100,8 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   date: {
     fontSize: 13,
@@ -100,6 +110,15 @@ const styles = StyleSheet.create({
   attachment: {
     fontSize: 13,
     color: '#007AFF',
+  },
+  timeUntil: {
+    fontSize: 13,
+    color: '#388E3C',
+    fontWeight: '500',
+  },
+  timeUntilOverdue: {
+    color: '#dc3545',
+    fontWeight: '600',
   },
   syncPending: {
     fontSize: 14,

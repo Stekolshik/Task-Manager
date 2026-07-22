@@ -2,6 +2,8 @@ import { TaskStatus } from '../types';
 
 export const CANDIDATE_CODE = 'SA-RN-2026';
 
+export const DEFAULT_GOOGLE_MAPS_API_KEY = '';
+
 export const DEFAULT_SERVER_URL = 'http://localhost:3000';
 
 export const STATUSES: TaskStatus[] = ['New', 'In Progress', 'Completed', 'Cancelled'];

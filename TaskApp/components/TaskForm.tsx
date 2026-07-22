@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { Task } from '../types';
-import { STATUSES, STATUS_LABELS, STATUS_COLORS } from '../utils/constants';
+import * as ImagePicker from 'expo-image-picker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { Task, Attachment } from '../types';
+import { STATUSES, STATUS_LABELS, STATUS_COLORS, generateId } from '../utils/constants';
 
 type TaskFormProps = {
   initialTask?: Partial<Task>;
@@ -34,6 +36,23 @@ export const TaskForm = ({ initialTask, onSubmit, onCancel, loading = false }: T
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+
+  const showDatePicker = () => setDatePickerVisibility(true);
+  const hideDatePicker = () => setDatePickerVisibility(false);
+
+  const handleConfirm = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const formatted = `${year}-${month}-${day} ${hours}:${minutes}`;
+    
+    setTask({ ...task, dueDate: formatted });
+    if (errors.dueDate) setErrors({ ...errors, dueDate: '' });
+    hideDatePicker();
+  };
 
   const getCurrentLocation = async () => {
     setGettingLocation(true);
@@ -88,6 +107,46 @@ export const TaskForm = ({ initialTask, onSubmit, onCancel, loading = false }: T
     }
   };
 
+  const pickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required', 'Please allow access to your photo library');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const newAttachment: Attachment = {
+        id: generateId(),
+        uri: asset.uri,
+        fileName: asset.fileName || 'image.jpg',
+        fileSize: asset.fileSize,
+        mimeType: asset.mimeType || 'image/jpeg',
+        createdAt: new Date().toISOString()
+      };
+
+      const currentAttachments = task.attachments || [];
+      setTask({
+        ...task,
+        attachments: [...currentAttachments, newAttachment]
+      });
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    const currentAttachments = task.attachments || [];
+    setTask({
+      ...task,
+      attachments: currentAttachments.filter(att => att.id !== id)
+    });
+  };
+
   const handleSubmit = () => {
     const validationErrors = validateTask(task);
     if (Object.keys(validationErrors).length > 0) {
@@ -140,17 +199,31 @@ export const TaskForm = ({ initialTask, onSubmit, onCancel, loading = false }: T
         <Text style={styles.label}>
           Due Date <Text style={styles.required}>*</Text>
         </Text>
-        <TextInput
-          style={[styles.input, errors.dueDate && styles.errorInput]}
-          value={task.dueDate}
-          onChangeText={(text) => {
-            setTask({ ...task, dueDate: text });
-            if (errors.dueDate) setErrors({ ...errors, dueDate: '' });
-          }}
-          placeholder="2026-07-25 14:30"
-          placeholderTextColor="#999"
-        />
+        <TouchableOpacity 
+          style={styles.dateContainer} 
+          onPress={showDatePicker} 
+          activeOpacity={0.7}
+        >
+          <TextInput
+            style={[styles.input, styles.dateInput, errors.dueDate && styles.errorInput]}
+            value={task.dueDate}
+            placeholder="Select due date & time"
+            placeholderTextColor="#999"
+            editable={false}
+            pointerEvents="none"
+          />
+          <Ionicons name="calendar-outline" size={24} color="#007AFF" style={styles.calendarIcon} />
+        </TouchableOpacity>
         {errors.dueDate && <Text style={styles.errorText}>{errors.dueDate}</Text>}
+        
+        <DateTimePickerModal
+          isVisible={isDatePickerVisible}
+          mode="datetime"
+          onConfirm={handleConfirm}
+          onCancel={hideDatePicker}
+          date={task.dueDate ? new Date(task.dueDate) : new Date()}
+          minimumDate={new Date()}
+        />
       </View>
 
       <View style={styles.field}>
@@ -182,6 +255,31 @@ export const TaskForm = ({ initialTask, onSubmit, onCancel, loading = false }: T
         </View>
         {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
         <Text style={styles.hint}>Tap to use current location</Text>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.label}>Attachments</Text>
+        <TouchableOpacity style={styles.addButton} onPress={pickImage}>
+          <Ionicons name="image-outline" size={24} color="#007AFF" />
+          <Text style={styles.addButtonText}>Add Image</Text>
+        </TouchableOpacity>
+
+        {(task.attachments && task.attachments.length > 0) && (
+          <View style={styles.attachmentsPreview}>
+            {task.attachments.map((att) => (
+              <View key={att.id} style={styles.attachmentItem}>
+                <Image source={{ uri: att.uri }} style={styles.attachmentImage} />
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => removeAttachment(att.id)}
+                >
+                  <Ionicons name="close-circle" size={20} color="#dc3545" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+        <Text style={styles.hint}>Tap to add image from gallery</Text>
       </View>
 
       <View style={styles.field}>
@@ -259,6 +357,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: '#1a1a1a',
   },
+  dateInput: {
+    paddingRight: 48,
+  },
   textArea: {
     minHeight: 100,
   },
@@ -269,6 +370,14 @@ const styles = StyleSheet.create({
     color: '#dc3545',
     fontSize: 12,
     marginTop: 4,
+  },
+  dateContainer: {
+    position: 'relative',
+  },
+  calendarIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
   },
   locationContainer: {
     flexDirection: 'row',
@@ -290,6 +399,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 4,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 8,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  attachmentsPreview: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  attachmentItem: {
+    position: 'relative',
+    width: 80,
+    height: 80,
+  },
+  attachmentImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+  },
+  removeButton: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#fff',
+    borderRadius: 10,
   },
   statusContainer: {
     flexDirection: 'row',

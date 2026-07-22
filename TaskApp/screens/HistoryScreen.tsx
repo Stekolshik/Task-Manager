@@ -3,8 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { formatDate } from '../utils/constants';
-import { CANDIDATE_CODE } from '../utils/constants';
+import { formatDate, CANDIDATE_CODE } from '../utils/constants';
 
 type FilterType = 'all' | 'created' | 'updated' | 'status_changed' | 'attachment_added' | 'attachment_removed' | 'deleted' | 'synced';
 
