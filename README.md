@@ -30,45 +30,11 @@ The UI is inspired by the classic Notepad.app aesthetic — clean, minimal, and 
 ---
 
 ##  Architecture
-App.tsx
-├── AppProvider (Context)
-│ ├── TaskContext — tasks, history, sync state
-│ └── ThemeContext — dark/light mode
-├── Navigation (Bottom Tabs)
-│ ├── Tasks Stack
-│ │ ├── TaskListScreen
-│ │ ├── TaskDetailScreen
-│ │ └── TaskFormScreen
-│ ├── HistoryScreen
-│ ├── MapScreen
-│ ├── NetworkScreen
-│ └── SettingsScreen
-└── Services
-├── storage — AsyncStorage CRUD
-├── sync — NetInfo + json-server sync
-└── notifications — Expo Notifications
+<img width="350" height="347" alt="image" src="https://github.com/user-attachments/assets/bb3c0464-8b02-496e-aa07-aabcae8b4574" />
 
-TaskApp/
-├── App.tsx # Root + Navigation
-├── components/
-│ ├── BottomTabBar.tsx # 5 tabs with sync indicator
-│ ├── TaskCard.tsx # Task card + StatusBadge inside
-│ └── TaskForm.tsx # Form + validation + buttons
-├── screens/
-│ ├── TaskListScreen.tsx # List + search + filter + sort
-│ ├── TaskDetailScreen.tsx # Details + status change + delete
-│ ├── HistoryScreen.tsx # Full audit log with filters
-│ ├── MapScreen.tsx # Markers + open task from marker
-│ ├── NetworkScreen.tsx # Sync status + ping + manual sync
-│ └── SettingsScreen.tsx # Theme toggle + server URL + API key + clear all
-├── services/
-│ └── appService.ts # storage + sync + notifications
-├── context/
-│ └── AppContext.tsx # Global state (tasks, history, theme, sync)
-├── types/
-│ └── index.ts # All TypeScript types
-└── utils/
-└── constants.ts # Candidate code, statuses, colors, helpers
+
+<img width="484" height="422" alt="image" src="https://github.com/user-attachments/assets/ab11cc41-e74e-4352-967d-5c32dbd5f3d4" />
+
 
 ## Component Design Philosophy
 
