@@ -77,7 +77,7 @@ assistance in learning new libraries
 
 All AI-generated code was reviewed, tested, and adapted to fit the specific requirements of this assignment.
 
-№№ links
+## links
 HH: https://rabota.by/resume/9a303116ff03e3bcd90039ed1f306a4e316c76
 LINK: https://www.linkedin.com/in/alexander-davydov-21172b22b/
 VIDEO:
