@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import * as Notifications from 'expo-notifications';
+import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import { Task, HistoryItem } from '../types';
 import { DEFAULT_SERVER_URL } from '../utils/constants';
 
@@ -121,7 +122,8 @@ export const notifications = {
           data: { taskId: task.id }
         },
         trigger: {
-          seconds: Math.max(triggerSeconds, 30)
+          seconds: Math.max(triggerSeconds, 30),
+          type: SchedulableTriggerInputTypes.TIME_INTERVAL
         }
       });
 
