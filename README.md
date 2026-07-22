@@ -103,8 +103,12 @@ Note: Use your local IP address in app settings (e.g., http://xxx.xxx.xxx.xxx:30
  APK Build
 
 # Build Android APK
-npx expo build:android
+# 1. Install EAS CLI
+npm install -g eas-cli
 
-# Or for local development
-npx expo run:android
+# 2. Login to Expo
+npx expo login
+
+# 3. Build APK directly
+eas build -p android
 #
