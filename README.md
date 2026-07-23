@@ -96,16 +96,23 @@ echo '{"tasks": [], "history": []}' > db.json
 # Start the server
 npx json-server --watch db.json --port 3000 --host 0.0.0.0
 Note: Use your local IP address in app settings (e.g., http://xxx.xxx.xxx.xxx:3000).
-
+№ For GEO use your api key in settings
  APK Build
 
 # Build Android APK
-# 1. Install EAS CLI
-npm install -g eas-cli
+## 1. Install dependencies
+npm install
 
-# 2. Login to Expo
-npx expo login
+## 2. Generate native Android project (if not generated)
+npx expo prebuild
 
-# 3. Build APK directly
-eas build -p android
+## 3. Navigate to Android folder
+cd android
+
+## 4. Build release APK
+./gradlew assembleRelease
+
+## 5. APK output location
+android/app/build/outputs/apk/release/app-release.apk
 #
+hints:  maybe you will need to create local.properties fro sd way. Also maybe config build.gradle
